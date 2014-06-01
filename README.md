@@ -16,4 +16,4 @@ To have either of the analysers running, you need to have
     process.MemoryCounter = cms.Service( "MemoryCounter" )
     process.ModuleTimer = cms.Service( "ModuleTimer" )
 
-somewhere in your config file. It is not recommended to have both running at the same time, MemoryCounter will likely give you erroneosly large results for ModuleTimer.
+somewhere in your config file. It is not recommended to have both running at the same time, MemoryCounter will likely give you erroneously large results for ModuleTimer.
