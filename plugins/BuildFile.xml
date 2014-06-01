@@ -1,0 +1,7 @@
+<include_path PATH="../external"/>
+<use   name="FWCore/ServiceRegistry"/>
+<use   name="boost"/>
+<flags LDFLAGS="-lboost_chrono"/>
+<library   file="*.cc" name="MarksToolsMemoryCounterPlugins">
+  <flags   EDM_PLUGIN="1"/>
+</library>
