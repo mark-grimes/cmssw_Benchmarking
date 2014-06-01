@@ -85,7 +85,7 @@ markstools::services::MemoryCounter::MemoryCounter( const edm::ParameterSet& par
 	{
 		std::cerr << " ***" << "\n"
 				<< " *** MemoryCounter: couldn't get the symbol in the analysing library. Are you running under intrusiveMemoryAnalyser? MemoryCounter will not function without it." << "\n"
-				<< " ***                See https://github.com/mark-grimes/MemCounter for details on how to get intrusiveMemoryAnalyser installed.
+				<< " ***                See https://github.com/mark-grimes/MemCounter for details on how to get intrusiveMemoryAnalyser installed." << "\n"
 				<< " ***" << std::endl;
 	}
 }
