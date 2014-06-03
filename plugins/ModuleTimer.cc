@@ -39,11 +39,20 @@ markstools::services::ModuleTimer::ModuleTimer( const edm::ParameterSet& paramet
 	activityRegister.watchPreModuleBeginJob( this, &ModuleTimer::preModuleBeginJob );
 	activityRegister.watchPostModuleBeginJob( this, &ModuleTimer::postModuleBeginJob );
 
+	activityRegister.watchPreModuleBeginRun( this, &ModuleTimer::preModuleBeginRun );
+	activityRegister.watchPostModuleBeginRun( this, &ModuleTimer::postModuleBeginRun );
+
+	activityRegister.watchPreModuleBeginLumi( this, &ModuleTimer::preModuleBeginLumi );
+	activityRegister.watchPostModuleBeginLumi( this, &ModuleTimer::postModuleBeginLumi );
+
 	activityRegister.watchPreModule( this, &ModuleTimer::preModule );
 	activityRegister.watchPostModule( this, &ModuleTimer::postModule );
 
 	activityRegister.watchPreProcessEvent( this, &ModuleTimer::preProcessEvent );
 	activityRegister.watchPostProcessEvent( this, &ModuleTimer::postProcessEvent );
+
+	activityRegister.watchPreModuleEndLumi( this, &ModuleTimer::preModuleEndLumi );
+	activityRegister.watchPostModuleEndLumi( this, &ModuleTimer::postModuleEndLumi );
 
 	activityRegister.watchPreModuleEndRun( this, &ModuleTimer::preModuleEndRun );
 	activityRegister.watchPostModuleEndRun( this, &ModuleTimer::postModuleEndRun );
