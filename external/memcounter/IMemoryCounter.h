@@ -8,6 +8,7 @@
 
 #include <iostream>
 #include <string>
+#include <dlfcn.h>
 
 namespace memcounter
 {
@@ -18,6 +19,18 @@ namespace memcounter
 	 */
 	class IMemoryCounter
 	{
+	public:
+		static memcounter::IMemoryCounter* createNew()
+		{
+			  memcounter::IMemoryCounter* (*createNewMemoryCounter)( void );
+			  memcounter::IMemoryCounter* pNewMemoryCounter=nullptr;
+			  if( void *sym = dlsym(0, "createNewMemoryCounter") )
+			  {
+			      createNewMemoryCounter = __extension__(memcounter::IMemoryCounter*(*)(void)) sym;
+			      pNewMemoryCounter=createNewMemoryCounter();
+			  }
+			  return pNewMemoryCounter;
+		}
 	public:
 		virtual bool setEnabled( bool enable ) = 0; ///< Returns the state before the call
 		virtual bool isEnabled() = 0; ///< Returns true if the counter is enabled
