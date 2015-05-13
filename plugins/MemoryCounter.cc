@@ -11,6 +11,53 @@
 // the BuildFile.xml.
 #include <memcounter/IMemoryCounter.h>
 
+//
+// unnamed namespace for things only used in this file
+//
+namespace
+{
+	struct ModuleDetails
+	{
+		memcounter::IMemoryCounter* pMemoryCounter;
+		long int previousRecordedSize;
+		std::string previousEvent;
+		ModuleDetails() : pMemoryCounter(nullptr), previousRecordedSize(-1) {}
+		ModuleDetails( memcounter::IMemoryCounter* pNewCounter ) : pMemoryCounter(pNewCounter), previousRecordedSize(-1) {}
+	};
+
+	bool enableMemoryCounter( const edm::ModuleDescription& description, std::map<std::string,::ModuleDetails>& allModuleDetails )
+	{
+		auto iModuleDetails=allModuleDetails.find( description.moduleLabel() );
+		if( iModuleDetails!=allModuleDetails.end() )
+		{
+			iModuleDetails->second.pMemoryCounter->resetMaximum();
+			if( iModuleDetails->second.previousRecordedSize!=-1 ) iModuleDetails->second.previousRecordedSize-=iModuleDetails->second.pMemoryCounter->currentSize();
+			iModuleDetails->second.pMemoryCounter->enable();
+			return true;
+		}
+		return false;
+	}
+
+	void disableMemoryCounterAndPrint( const edm::ModuleDescription& description, std::map<std::string,::ModuleDetails>& allModuleDetails, const std::string& methodName )
+	{
+		auto iModuleDetails=allModuleDetails.find( description.moduleLabel() );
+		if( iModuleDetails!=allModuleDetails.end() )
+		{
+			memcounter::IMemoryCounter* pMemoryCounter=iModuleDetails->second.pMemoryCounter;
+			pMemoryCounter->disable();
+
+			std::cout << " *MEMCOUNTER* " << methodName << "," << description.moduleLabel() << "," << description.moduleName()
+					<< "," << pMemoryCounter->currentSize() << "," << pMemoryCounter->maximumSize()
+					<< "," << pMemoryCounter->currentNumberOfAllocations() << "," << pMemoryCounter->maximumNumberOfAllocations();
+			if( iModuleDetails->second.previousRecordedSize!=-1 ) std::cout << "," << iModuleDetails->second.previousEvent
+					<< "," << iModuleDetails->second.previousRecordedSize;
+			std::cout << std::endl;
+
+			iModuleDetails->second.previousRecordedSize=pMemoryCounter->currentSize();
+			iModuleDetails->second.previousEvent=methodName;
+		}
+	}
+} // end of the unnamed namespace
 
 //
 // Define the pimple class
@@ -23,11 +70,12 @@ namespace markstools
 		{
 		public:
 			MemoryCounterPimple() : eventNumber_(1), verbose_(false), createNewMemoryCounter(NULL) {}
-			std::map<std::string,memcounter::IMemoryCounter*> memoryCounters_;
+			std::map<std::string,::ModuleDetails> memoryCounters_;
 			size_t eventNumber_;
 			std::vector<std::string> modulesToAnalyse_;
 			bool verbose_;
 			memcounter::IMemoryCounter* (*createNewMemoryCounter)( void );
+			std::map<memcounter::IMemoryCounter*,long int> previousRecordedSize_; // The size recorded for the previous event. Used to calculate event content size.
 		}; // end of the PlottingTimerPimple class
 
 	} // end of the markstools::services namespace
@@ -123,7 +171,7 @@ void markstools::services::MemoryCounter::preModuleConstruction( const edm::Modu
 		memcounter::IMemoryCounter* pMemoryCounter=pImple_->createNewMemoryCounter();
 		if( pMemoryCounter )
 		{
-			pImple_->memoryCounters_.insert( std::make_pair(description.moduleLabel(),pMemoryCounter) );
+			pImple_->memoryCounters_.insert( std::make_pair(description.moduleLabel(),::ModuleDetails(pMemoryCounter)) );
 			if( pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" of type \"" << description.moduleName() << "\"." << std::endl;
 			pMemoryCounter->resetMaximum();
 			pMemoryCounter->enable();
@@ -135,116 +183,51 @@ void markstools::services::MemoryCounter::preModuleConstruction( const edm::Modu
 
 void markstools::services::MemoryCounter::postModuleConstruction( const edm::ModuleDescription& description )
 {
-	std::map<std::string,memcounter::IMemoryCounter*>::iterator iMemoryCounter=pImple_->memoryCounters_.find( description.moduleLabel() );
-	if( iMemoryCounter!=pImple_->memoryCounters_.end() )
-	{
-		memcounter::IMemoryCounter* pMemoryCounter=iMemoryCounter->second;
-		pMemoryCounter->disable();
-
-		std::cout << " *MEMCOUNTER* Construction," << description.moduleLabel() << "," << description.moduleName()
-				<< "," << pMemoryCounter->currentSize() << "," << pMemoryCounter->maximumSize()
-				<< "," << pMemoryCounter->currentNumberOfAllocations() << "," << pMemoryCounter->maximumNumberOfAllocations() << std::endl;
-	}
+	::disableMemoryCounterAndPrint( description, pImple_->memoryCounters_, "Construction" );
 }
 
 void markstools::services::MemoryCounter::preModuleBeginJob( const edm::ModuleDescription& description )
 {
-	std::map<std::string,memcounter::IMemoryCounter*>::iterator iMemoryCounter=pImple_->memoryCounters_.find( description.moduleLabel() );
-	if( iMemoryCounter!=pImple_->memoryCounters_.end() )
-	{
-		if( pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method beginJob." << std::endl;
-		iMemoryCounter->second->resetMaximum();
-		iMemoryCounter->second->enable();
-	}
+	bool isEnabled=::enableMemoryCounter( description, pImple_->memoryCounters_ );
+	if( isEnabled && pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method beginJob." << std::endl;
 }
 
 void markstools::services::MemoryCounter::postModuleBeginJob( const edm::ModuleDescription& description )
 {
-	std::map<std::string,memcounter::IMemoryCounter*>::iterator iMemoryCounter=pImple_->memoryCounters_.find( description.moduleLabel() );
-	if( iMemoryCounter!=pImple_->memoryCounters_.end() )
-	{
-		memcounter::IMemoryCounter* pMemoryCounter=iMemoryCounter->second;
-		pMemoryCounter->disable();
-
-		std::cout << " *MEMCOUNTER* beginJob," << description.moduleLabel() << "," << description.moduleName()
-				<< "," << pMemoryCounter->currentSize() << "," << pMemoryCounter->maximumSize()
-				<< "," << pMemoryCounter->currentNumberOfAllocations() << "," << pMemoryCounter->maximumNumberOfAllocations() << std::endl;
-	}
+	::disableMemoryCounterAndPrint( description, pImple_->memoryCounters_, "beginJob" );
 }
 
 void markstools::services::MemoryCounter::preModuleBeginRun( const edm::ModuleDescription& description )
 {
-	std::map<std::string,memcounter::IMemoryCounter*>::iterator iMemoryCounter=pImple_->memoryCounters_.find( description.moduleLabel() );
-	if( iMemoryCounter!=pImple_->memoryCounters_.end() )
-	{
-		if( pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method beginRun." << std::endl;
-		iMemoryCounter->second->resetMaximum();
-		iMemoryCounter->second->enable();
-	}
+	bool isEnabled=::enableMemoryCounter( description, pImple_->memoryCounters_ );
+	if( isEnabled && pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method beginRun." << std::endl;
 }
 
 void markstools::services::MemoryCounter::postModuleBeginRun( const edm::ModuleDescription& description )
 {
-	std::map<std::string,memcounter::IMemoryCounter*>::iterator iMemoryCounter=pImple_->memoryCounters_.find( description.moduleLabel() );
-	if( iMemoryCounter!=pImple_->memoryCounters_.end() )
-	{
-		memcounter::IMemoryCounter* pMemoryCounter=iMemoryCounter->second;
-		pMemoryCounter->disable();
-
-		std::cout << " *MEMCOUNTER* beginRun," << description.moduleLabel() << "," << description.moduleName()
-				<< "," << pMemoryCounter->currentSize() << "," << pMemoryCounter->maximumSize()
-				<< "," << pMemoryCounter->currentNumberOfAllocations() << "," << pMemoryCounter->maximumNumberOfAllocations() << std::endl;
-	}
+	::disableMemoryCounterAndPrint( description, pImple_->memoryCounters_, "beginRun" );
 }
 
 void markstools::services::MemoryCounter::preModuleBeginLumi( const edm::ModuleDescription& description )
 {
-	std::map<std::string,memcounter::IMemoryCounter*>::iterator iMemoryCounter=pImple_->memoryCounters_.find( description.moduleLabel() );
-	if( iMemoryCounter!=pImple_->memoryCounters_.end() )
-	{
-		if( pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method beginLuminosityBlock." << std::endl;
-		iMemoryCounter->second->resetMaximum();
-		iMemoryCounter->second->enable();
-	}
+	bool isEnabled=::enableMemoryCounter( description, pImple_->memoryCounters_ );
+	if( isEnabled && pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method beginLuminosityBlock." << std::endl;
 }
 
 void markstools::services::MemoryCounter::postModuleBeginLumi( const edm::ModuleDescription& description )
 {
-	std::map<std::string,memcounter::IMemoryCounter*>::iterator iMemoryCounter=pImple_->memoryCounters_.find( description.moduleLabel() );
-	if( iMemoryCounter!=pImple_->memoryCounters_.end() )
-	{
-		memcounter::IMemoryCounter* pMemoryCounter=iMemoryCounter->second;
-		pMemoryCounter->disable();
-
-		std::cout << " *MEMCOUNTER* beginLumi," << description.moduleLabel() << "," << description.moduleName()
-				<< "," << pMemoryCounter->currentSize() << "," << pMemoryCounter->maximumSize()
-				<< "," << pMemoryCounter->currentNumberOfAllocations() << "," << pMemoryCounter->maximumNumberOfAllocations() << std::endl;
-	}
+	::disableMemoryCounterAndPrint( description, pImple_->memoryCounters_, "beginLumi" );
 }
 
 void markstools::services::MemoryCounter::preModule( const edm::ModuleDescription& description )
 {
-	std::map<std::string,memcounter::IMemoryCounter*>::iterator iMemoryCounter=pImple_->memoryCounters_.find( description.moduleLabel() );
-	if( iMemoryCounter!=pImple_->memoryCounters_.end() )
-	{
-		if( pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method analyze." << std::endl;
-		iMemoryCounter->second->resetMaximum();
-		iMemoryCounter->second->enable();
-	}
+	bool isEnabled=::enableMemoryCounter( description, pImple_->memoryCounters_ );
+	if( isEnabled && pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method analyze." << std::endl;
 }
 
 void markstools::services::MemoryCounter::postModule( const edm::ModuleDescription& description )
 {
-	std::map<std::string,memcounter::IMemoryCounter*>::iterator iMemoryCounter=pImple_->memoryCounters_.find( description.moduleLabel() );
-	if( iMemoryCounter!=pImple_->memoryCounters_.end() )
-	{
-		memcounter::IMemoryCounter* pMemoryCounter=iMemoryCounter->second;
-		pMemoryCounter->disable();
-
-		std::cout << " *MEMCOUNTER* event" << pImple_->eventNumber_ << "," << description.moduleLabel() << "," << description.moduleName()
-				<< "," << pMemoryCounter->currentSize() << "," << pMemoryCounter->maximumSize()
-				<< "," << pMemoryCounter->currentNumberOfAllocations() << "," << pMemoryCounter->maximumNumberOfAllocations() << std::endl;
-	}
+	::disableMemoryCounterAndPrint( description, pImple_->memoryCounters_, "event"+std::to_string(pImple_->eventNumber_) );
 }
 
 void markstools::services::MemoryCounter::postProcessEvent( const edm::Event& event, const edm::EventSetup& eventSetup )
@@ -254,77 +237,35 @@ void markstools::services::MemoryCounter::postProcessEvent( const edm::Event& ev
 
 void markstools::services::MemoryCounter::preModuleEndLumi( const edm::ModuleDescription& description )
 {
-	std::map<std::string,memcounter::IMemoryCounter*>::iterator iMemoryCounter=pImple_->memoryCounters_.find( description.moduleLabel() );
-	if( iMemoryCounter!=pImple_->memoryCounters_.end() )
-	{
-		if( pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method endLuminosityBlock." << std::endl;
-		iMemoryCounter->second->resetMaximum();
-		iMemoryCounter->second->enable();
-	}
+	bool isEnabled=::enableMemoryCounter( description, pImple_->memoryCounters_ );
+	if( isEnabled && pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method endLuminosityBlock." << std::endl;
 }
 
 void markstools::services::MemoryCounter::postModuleEndLumi( const edm::ModuleDescription& description )
 {
-	std::map<std::string,memcounter::IMemoryCounter*>::iterator iMemoryCounter=pImple_->memoryCounters_.find( description.moduleLabel() );
-	if( iMemoryCounter!=pImple_->memoryCounters_.end() )
-	{
-		memcounter::IMemoryCounter* pMemoryCounter=iMemoryCounter->second;
-		pMemoryCounter->disable();
-
-		std::cout << " *MEMCOUNTER* endLumi," << description.moduleLabel() << "," << description.moduleName()
-				<< "," << pMemoryCounter->currentSize() << "," << pMemoryCounter->maximumSize()
-				<< "," << pMemoryCounter->currentNumberOfAllocations() << "," << pMemoryCounter->maximumNumberOfAllocations() << std::endl;
-	}
+	::disableMemoryCounterAndPrint( description, pImple_->memoryCounters_, "endLumi" );
 }
 
 void markstools::services::MemoryCounter::preModuleEndRun( const edm::ModuleDescription& description )
 {
-	std::map<std::string,memcounter::IMemoryCounter*>::iterator iMemoryCounter=pImple_->memoryCounters_.find( description.moduleLabel() );
-	if( iMemoryCounter!=pImple_->memoryCounters_.end() )
-	{
-		if( pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method endRun." << std::endl;
-		iMemoryCounter->second->resetMaximum();
-		iMemoryCounter->second->enable();
-	}
+	bool isEnabled=::enableMemoryCounter( description, pImple_->memoryCounters_ );
+	if( isEnabled && pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method endRun." << std::endl;
 }
 
 void markstools::services::MemoryCounter::postModuleEndRun( const edm::ModuleDescription& description )
 {
-	std::map<std::string,memcounter::IMemoryCounter*>::iterator iMemoryCounter=pImple_->memoryCounters_.find( description.moduleLabel() );
-	if( iMemoryCounter!=pImple_->memoryCounters_.end() )
-	{
-		memcounter::IMemoryCounter* pMemoryCounter=iMemoryCounter->second;
-		pMemoryCounter->disable();
-
-		std::cout << " *MEMCOUNTER* endRun," << description.moduleLabel() << "," << description.moduleName()
-				<< "," << pMemoryCounter->currentSize() << "," << pMemoryCounter->maximumSize()
-				<< "," << pMemoryCounter->currentNumberOfAllocations() << "," << pMemoryCounter->maximumNumberOfAllocations() << std::endl;
-	}
+	::disableMemoryCounterAndPrint( description, pImple_->memoryCounters_, "endRun" );
 }
 
 void markstools::services::MemoryCounter::preModuleEndJob( const edm::ModuleDescription& description )
 {
-	std::map<std::string,memcounter::IMemoryCounter*>::iterator iMemoryCounter=pImple_->memoryCounters_.find( description.moduleLabel() );
-	if( iMemoryCounter!=pImple_->memoryCounters_.end() )
-	{
-		if( pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method endJob." << std::endl;
-		iMemoryCounter->second->resetMaximum();
-		iMemoryCounter->second->enable();
-	}
+	bool isEnabled=::enableMemoryCounter( description, pImple_->memoryCounters_ );
+	if( isEnabled && pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method endJob." << std::endl;
 }
 
 void markstools::services::MemoryCounter::postModuleEndJob( const edm::ModuleDescription& description )
 {
-	std::map<std::string,memcounter::IMemoryCounter*>::iterator iMemoryCounter=pImple_->memoryCounters_.find( description.moduleLabel() );
-	if( iMemoryCounter!=pImple_->memoryCounters_.end() )
-	{
-		memcounter::IMemoryCounter* pMemoryCounter=iMemoryCounter->second;
-		pMemoryCounter->disable();
-
-		std::cout << " *MEMCOUNTER* endJob," << description.moduleLabel() << "," << description.moduleName()
-				<< "," << pMemoryCounter->currentSize() << "," << pMemoryCounter->maximumSize()
-				<< "," << pMemoryCounter->currentNumberOfAllocations() << "," << pMemoryCounter->maximumNumberOfAllocations() << std::endl;
-	}
+	::disableMemoryCounterAndPrint( description, pImple_->memoryCounters_, "endJob" );
 }
 
 using markstools::services::MemoryCounter;
