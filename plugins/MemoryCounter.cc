@@ -125,6 +125,7 @@ void markstools::services::MemoryCounter::preModuleConstruction( const edm::Modu
 		{
 			pImple_->memoryCounters_.insert( std::make_pair(description.moduleLabel(),pMemoryCounter) );
 			if( pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" of type \"" << description.moduleName() << "\"." << std::endl;
+			pMemoryCounter->resetMaximum();
 			pMemoryCounter->enable();
 		}
 		else std::cout << "Couldn't get a pointer for a new IMemoryAnalyser, so module \"" << description.moduleLabel() << "\" will not be analysed." << std::endl;
@@ -143,8 +144,6 @@ void markstools::services::MemoryCounter::postModuleConstruction( const edm::Mod
 		std::cout << " *MEMCOUNTER* Construction," << description.moduleLabel() << "," << description.moduleName()
 				<< "," << pMemoryCounter->currentSize() << "," << pMemoryCounter->maximumSize()
 				<< "," << pMemoryCounter->currentNumberOfAllocations() << "," << pMemoryCounter->maximumNumberOfAllocations() << std::endl;
-
-		pMemoryCounter->resetMaximum();
 	}
 }
 
@@ -154,6 +153,7 @@ void markstools::services::MemoryCounter::preModuleBeginJob( const edm::ModuleDe
 	if( iMemoryCounter!=pImple_->memoryCounters_.end() )
 	{
 		if( pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method beginJob." << std::endl;
+		iMemoryCounter->second->resetMaximum();
 		iMemoryCounter->second->enable();
 	}
 }
@@ -169,8 +169,6 @@ void markstools::services::MemoryCounter::postModuleBeginJob( const edm::ModuleD
 		std::cout << " *MEMCOUNTER* beginJob," << description.moduleLabel() << "," << description.moduleName()
 				<< "," << pMemoryCounter->currentSize() << "," << pMemoryCounter->maximumSize()
 				<< "," << pMemoryCounter->currentNumberOfAllocations() << "," << pMemoryCounter->maximumNumberOfAllocations() << std::endl;
-
-		pMemoryCounter->resetMaximum();
 	}
 }
 
@@ -180,6 +178,7 @@ void markstools::services::MemoryCounter::preModuleBeginRun( const edm::ModuleDe
 	if( iMemoryCounter!=pImple_->memoryCounters_.end() )
 	{
 		if( pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method beginRun." << std::endl;
+		iMemoryCounter->second->resetMaximum();
 		iMemoryCounter->second->enable();
 	}
 }
@@ -195,8 +194,6 @@ void markstools::services::MemoryCounter::postModuleBeginRun( const edm::ModuleD
 		std::cout << " *MEMCOUNTER* beginRun," << description.moduleLabel() << "," << description.moduleName()
 				<< "," << pMemoryCounter->currentSize() << "," << pMemoryCounter->maximumSize()
 				<< "," << pMemoryCounter->currentNumberOfAllocations() << "," << pMemoryCounter->maximumNumberOfAllocations() << std::endl;
-
-		pMemoryCounter->resetMaximum();
 	}
 }
 
@@ -206,6 +203,7 @@ void markstools::services::MemoryCounter::preModuleBeginLumi( const edm::ModuleD
 	if( iMemoryCounter!=pImple_->memoryCounters_.end() )
 	{
 		if( pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method beginLuminosityBlock." << std::endl;
+		iMemoryCounter->second->resetMaximum();
 		iMemoryCounter->second->enable();
 	}
 }
@@ -221,8 +219,6 @@ void markstools::services::MemoryCounter::postModuleBeginLumi( const edm::Module
 		std::cout << " *MEMCOUNTER* beginLumi," << description.moduleLabel() << "," << description.moduleName()
 				<< "," << pMemoryCounter->currentSize() << "," << pMemoryCounter->maximumSize()
 				<< "," << pMemoryCounter->currentNumberOfAllocations() << "," << pMemoryCounter->maximumNumberOfAllocations() << std::endl;
-
-		pMemoryCounter->resetMaximum();
 	}
 }
 
@@ -232,6 +228,7 @@ void markstools::services::MemoryCounter::preModule( const edm::ModuleDescriptio
 	if( iMemoryCounter!=pImple_->memoryCounters_.end() )
 	{
 		if( pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method analyze." << std::endl;
+		iMemoryCounter->second->resetMaximum();
 		iMemoryCounter->second->enable();
 	}
 }
@@ -247,8 +244,6 @@ void markstools::services::MemoryCounter::postModule( const edm::ModuleDescripti
 		std::cout << " *MEMCOUNTER* event" << pImple_->eventNumber_ << "," << description.moduleLabel() << "," << description.moduleName()
 				<< "," << pMemoryCounter->currentSize() << "," << pMemoryCounter->maximumSize()
 				<< "," << pMemoryCounter->currentNumberOfAllocations() << "," << pMemoryCounter->maximumNumberOfAllocations() << std::endl;
-
-		pMemoryCounter->resetMaximum();
 	}
 }
 
@@ -263,6 +258,7 @@ void markstools::services::MemoryCounter::preModuleEndLumi( const edm::ModuleDes
 	if( iMemoryCounter!=pImple_->memoryCounters_.end() )
 	{
 		if( pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method endLuminosityBlock." << std::endl;
+		iMemoryCounter->second->resetMaximum();
 		iMemoryCounter->second->enable();
 	}
 }
@@ -278,8 +274,6 @@ void markstools::services::MemoryCounter::postModuleEndLumi( const edm::ModuleDe
 		std::cout << " *MEMCOUNTER* endLumi," << description.moduleLabel() << "," << description.moduleName()
 				<< "," << pMemoryCounter->currentSize() << "," << pMemoryCounter->maximumSize()
 				<< "," << pMemoryCounter->currentNumberOfAllocations() << "," << pMemoryCounter->maximumNumberOfAllocations() << std::endl;
-
-		pMemoryCounter->resetMaximum();
 	}
 }
 
@@ -289,6 +283,7 @@ void markstools::services::MemoryCounter::preModuleEndRun( const edm::ModuleDesc
 	if( iMemoryCounter!=pImple_->memoryCounters_.end() )
 	{
 		if( pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method endRun." << std::endl;
+		iMemoryCounter->second->resetMaximum();
 		iMemoryCounter->second->enable();
 	}
 }
@@ -304,8 +299,6 @@ void markstools::services::MemoryCounter::postModuleEndRun( const edm::ModuleDes
 		std::cout << " *MEMCOUNTER* endRun," << description.moduleLabel() << "," << description.moduleName()
 				<< "," << pMemoryCounter->currentSize() << "," << pMemoryCounter->maximumSize()
 				<< "," << pMemoryCounter->currentNumberOfAllocations() << "," << pMemoryCounter->maximumNumberOfAllocations() << std::endl;
-
-		pMemoryCounter->resetMaximum();
 	}
 }
 
@@ -315,6 +308,7 @@ void markstools::services::MemoryCounter::preModuleEndJob( const edm::ModuleDesc
 	if( iMemoryCounter!=pImple_->memoryCounters_.end() )
 	{
 		if( pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method endJob." << std::endl;
+		iMemoryCounter->second->resetMaximum();
 		iMemoryCounter->second->enable();
 	}
 }
@@ -330,8 +324,6 @@ void markstools::services::MemoryCounter::postModuleEndJob( const edm::ModuleDes
 		std::cout << " *MEMCOUNTER* endJob," << description.moduleLabel() << "," << description.moduleName()
 				<< "," << pMemoryCounter->currentSize() << "," << pMemoryCounter->maximumSize()
 				<< "," << pMemoryCounter->currentNumberOfAllocations() << "," << pMemoryCounter->maximumNumberOfAllocations() << std::endl;
-
-		pMemoryCounter->resetMaximum();
 	}
 }
 
