@@ -49,7 +49,9 @@ def createPlot( allResults, moduleNames, valueFunctor, title="" ):
                 pass # If the file didn't finish properly not all modules will have the final step
         plots[-1].GetYaxis().SetTitle( "Memory/MiB" )
         #plots[-1].GetXaxis().SetRangeUser( -0.5, len(allResults.steps)-0.5 );
-        plots[-1].SetLineColor( availableColours[moduleIndex%len(availableColours)]-moduleIndex/len(availableColours) )
+        colour=availableColours[moduleIndex%len(availableColours)]-moduleIndex/len(availableColours)
+        plots[-1].SetLineColor( colour )
+        plots[-1].SetMarkerColor( colour )
         plots[-1].SetFillColor( ROOT.kWhite )
         plots[-1].SetBit( ROOT.TH1.kNoTitle, True );
         plots[-1].SetBit( ROOT.TH1.kNoStats, True );
