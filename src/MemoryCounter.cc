@@ -1,7 +1,8 @@
-#include "MemoryCounter.h"
-#include "FWCore/ServiceRegistry/interface/ServiceMaker.h" // Required for DEFINE_FWK_SERVICE
+#include "MarksTools/Benchmarking/interface/MemoryCounter.h"
 
 #include <DataFormats/Provenance/interface/ModuleDescription.h>
+#include "FWCore/ParameterSet/interface/ParameterSet.h"
+#include "FWCore/ServiceRegistry/interface/ActivityRegistry.h"
 #include <dlfcn.h>
 
 #include <iostream>
@@ -267,6 +268,3 @@ void markstools::services::MemoryCounter::postModuleEndJob( const edm::ModuleDes
 {
 	::disableMemoryCounterAndPrint( description, pImple_->memoryCounters_, "endJob" );
 }
-
-using markstools::services::MemoryCounter;
-DEFINE_FWK_SERVICE( MemoryCounter );
