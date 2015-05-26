@@ -36,32 +36,6 @@ namespace markstools
 
 			/// @brief Private assignment operator because there should only ever be one instance.
 			MemoryCounter& operator=( const MemoryCounter& otherMemoryCounter );
-		protected:
-			void preModuleConstruction( const edm::ModuleDescription& description );
-			void postModuleConstruction( const edm::ModuleDescription& description );
-
-			void preModuleBeginJob( const edm::ModuleDescription& description );
-			void postModuleBeginJob( const edm::ModuleDescription& description );
-
-			void preModuleBeginRun( const edm::ModuleDescription& description );
-			void postModuleBeginRun( const edm::ModuleDescription& description );
-
-			void preModuleBeginLumi( const edm::ModuleDescription& description );
-			void postModuleBeginLumi( const edm::ModuleDescription& description );
-
-			void preModule( const edm::ModuleDescription& description );
-			void postModule( const edm::ModuleDescription& description );
-
-			void postProcessEvent( const edm::Event& event, const edm::EventSetup& eventSetup );
-
-			void preModuleEndLumi( const edm::ModuleDescription& description );
-			void postModuleEndLumi( const edm::ModuleDescription& description );
-
-			void preModuleEndRun( const edm::ModuleDescription& description );
-			void postModuleEndRun( const edm::ModuleDescription& description );
-
-			void preModuleEndJob( const edm::ModuleDescription& description );
-			void postModuleEndJob( const edm::ModuleDescription& description );
 		private:
 			/// @brief Hide all the private members in a pimple. Google "pimple idiom" for details.
 			class MemoryCounterPimple* pImple_;

@@ -77,6 +77,32 @@ namespace markstools
 			bool verbose_;
 			memcounter::IMemoryCounter* (*createNewMemoryCounter)( void );
 			std::map<memcounter::IMemoryCounter*,long int> previousRecordedSize_; // The size recorded for the previous event. Used to calculate event content size.
+		public:
+			void preModuleConstruction( const edm::ModuleDescription& description );
+			void postModuleConstruction( const edm::ModuleDescription& description );
+
+			void preModuleBeginJob( const edm::ModuleDescription& description );
+			void postModuleBeginJob( const edm::ModuleDescription& description );
+
+			void preModuleBeginRun( const edm::ModuleDescription& description );
+			void postModuleBeginRun( const edm::ModuleDescription& description );
+
+			void preModuleBeginLumi( const edm::ModuleDescription& description );
+			void postModuleBeginLumi( const edm::ModuleDescription& description );
+
+			void preModule( const edm::ModuleDescription& description );
+			void postModule( const edm::ModuleDescription& description );
+
+			void postProcessEvent( const edm::Event& event, const edm::EventSetup& eventSetup );
+
+			void preModuleEndLumi( const edm::ModuleDescription& description );
+			void postModuleEndLumi( const edm::ModuleDescription& description );
+
+			void preModuleEndRun( const edm::ModuleDescription& description );
+			void postModuleEndRun( const edm::ModuleDescription& description );
+
+			void preModuleEndJob( const edm::ModuleDescription& description );
+			void postModuleEndJob( const edm::ModuleDescription& description );
 		}; // end of the PlottingTimerPimple class
 
 	} // end of the markstools::services namespace
@@ -104,31 +130,31 @@ markstools::services::MemoryCounter::MemoryCounter( const edm::ParameterSet& par
 		//
 		// Register all of the watching functions
 		//
-		activityRegister.watchPreModuleConstruction( this, &MemoryCounter::preModuleConstruction );
-		activityRegister.watchPostModuleConstruction( this, &MemoryCounter::postModuleConstruction );
+		activityRegister.watchPreModuleConstruction( pImple_, &MemoryCounterPimple::preModuleConstruction );
+		activityRegister.watchPostModuleConstruction( pImple_, &MemoryCounterPimple::postModuleConstruction );
 
-		activityRegister.watchPreModuleBeginJob( this, &MemoryCounter::preModuleBeginJob );
-		activityRegister.watchPostModuleBeginJob( this, &MemoryCounter::postModuleBeginJob );
+		activityRegister.watchPreModuleBeginJob( pImple_, &MemoryCounterPimple::preModuleBeginJob );
+		activityRegister.watchPostModuleBeginJob( pImple_, &MemoryCounterPimple::postModuleBeginJob );
 
-		activityRegister.watchPreModuleBeginRun( this, &MemoryCounter::preModuleBeginRun );
-		activityRegister.watchPostModuleBeginRun( this, &MemoryCounter::postModuleBeginRun );
+		activityRegister.watchPreModuleBeginRun( pImple_, &MemoryCounterPimple::preModuleBeginRun );
+		activityRegister.watchPostModuleBeginRun( pImple_, &MemoryCounterPimple::postModuleBeginRun );
 
-		activityRegister.watchPreModuleBeginLumi( this, &MemoryCounter::preModuleBeginLumi );
-		activityRegister.watchPostModuleBeginLumi( this, &MemoryCounter::postModuleBeginLumi );
+		activityRegister.watchPreModuleBeginLumi( pImple_, &MemoryCounterPimple::preModuleBeginLumi );
+		activityRegister.watchPostModuleBeginLumi( pImple_, &MemoryCounterPimple::postModuleBeginLumi );
 
-		activityRegister.watchPreModule( this, &MemoryCounter::preModule );
-		activityRegister.watchPostModule( this, &MemoryCounter::postModule );
+		activityRegister.watchPreModule( pImple_, &MemoryCounterPimple::preModule );
+		activityRegister.watchPostModule( pImple_, &MemoryCounterPimple::postModule );
 
-		activityRegister.watchPostProcessEvent( this, &MemoryCounter::postProcessEvent );
+		activityRegister.watchPostProcessEvent( pImple_, &MemoryCounterPimple::postProcessEvent );
 
-		activityRegister.watchPreModuleEndLumi( this, &MemoryCounter::preModuleEndLumi );
-		activityRegister.watchPostModuleEndLumi( this, &MemoryCounter::postModuleEndLumi );
+		activityRegister.watchPreModuleEndLumi( pImple_, &MemoryCounterPimple::preModuleEndLumi );
+		activityRegister.watchPostModuleEndLumi( pImple_, &MemoryCounterPimple::postModuleEndLumi );
 
-		activityRegister.watchPreModuleEndRun( this, &MemoryCounter::preModuleEndRun );
-		activityRegister.watchPostModuleEndRun( this, &MemoryCounter::postModuleEndRun );
+		activityRegister.watchPreModuleEndRun( pImple_, &MemoryCounterPimple::preModuleEndRun );
+		activityRegister.watchPostModuleEndRun( pImple_, &MemoryCounterPimple::postModuleEndRun );
 
-		activityRegister.watchPreModuleEndJob( this, &MemoryCounter::preModuleEndJob );
-		activityRegister.watchPostModuleEndJob( this, &MemoryCounter::postModuleEndJob );
+		activityRegister.watchPreModuleEndJob( pImple_, &MemoryCounterPimple::preModuleEndJob );
+		activityRegister.watchPostModuleEndJob( pImple_, &MemoryCounterPimple::postModuleEndJob );
 	}
 	else
 	{
@@ -164,16 +190,16 @@ markstools::services::MemoryCounter& markstools::services::MemoryCounter::operat
 	return *this;
 }
 
-void markstools::services::MemoryCounter::preModuleConstruction( const edm::ModuleDescription& description )
+void markstools::services::MemoryCounterPimple::preModuleConstruction( const edm::ModuleDescription& description )
 {
 	// If the vector is empty then I went to analyse all the modules. Otherwise check to see if the module name is in the list of modules to be analysed
-	if( pImple_->modulesToAnalyse_.empty() || std::find( pImple_->modulesToAnalyse_.begin(), pImple_->modulesToAnalyse_.end(), description.moduleLabel() )!=pImple_->modulesToAnalyse_.end() )
+	if( modulesToAnalyse_.empty() || std::find( modulesToAnalyse_.begin(), modulesToAnalyse_.end(), description.moduleLabel() )!=modulesToAnalyse_.end() )
 	{
-		memcounter::IMemoryCounter* pMemoryCounter=pImple_->createNewMemoryCounter();
+		memcounter::IMemoryCounter* pMemoryCounter=createNewMemoryCounter();
 		if( pMemoryCounter )
 		{
-			pImple_->memoryCounters_.insert( std::make_pair(description.moduleLabel(),::ModuleDetails(pMemoryCounter)) );
-			if( pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" of type \"" << description.moduleName() << "\"." << std::endl;
+			memoryCounters_.insert( std::make_pair(description.moduleLabel(),::ModuleDetails(pMemoryCounter)) );
+			if( verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" of type \"" << description.moduleName() << "\"." << std::endl;
 			pMemoryCounter->resetMaximum();
 			pMemoryCounter->enable();
 		}
@@ -182,89 +208,89 @@ void markstools::services::MemoryCounter::preModuleConstruction( const edm::Modu
 	else std::cout << "MemCounter not enabled for module \"" << description.moduleLabel() << "\"." << std::endl;
 }
 
-void markstools::services::MemoryCounter::postModuleConstruction( const edm::ModuleDescription& description )
+void markstools::services::MemoryCounterPimple::postModuleConstruction( const edm::ModuleDescription& description )
 {
-	::disableMemoryCounterAndPrint( description, pImple_->memoryCounters_, "Construction" );
+	::disableMemoryCounterAndPrint( description, memoryCounters_, "Construction" );
 }
 
-void markstools::services::MemoryCounter::preModuleBeginJob( const edm::ModuleDescription& description )
+void markstools::services::MemoryCounterPimple::preModuleBeginJob( const edm::ModuleDescription& description )
 {
-	bool isEnabled=::enableMemoryCounter( description, pImple_->memoryCounters_ );
-	if( isEnabled && pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method beginJob." << std::endl;
+	bool isEnabled=::enableMemoryCounter( description, memoryCounters_ );
+	if( isEnabled && verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method beginJob." << std::endl;
 }
 
-void markstools::services::MemoryCounter::postModuleBeginJob( const edm::ModuleDescription& description )
+void markstools::services::MemoryCounterPimple::postModuleBeginJob( const edm::ModuleDescription& description )
 {
-	::disableMemoryCounterAndPrint( description, pImple_->memoryCounters_, "beginJob" );
+	::disableMemoryCounterAndPrint( description, memoryCounters_, "beginJob" );
 }
 
-void markstools::services::MemoryCounter::preModuleBeginRun( const edm::ModuleDescription& description )
+void markstools::services::MemoryCounterPimple::preModuleBeginRun( const edm::ModuleDescription& description )
 {
-	bool isEnabled=::enableMemoryCounter( description, pImple_->memoryCounters_ );
-	if( isEnabled && pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method beginRun." << std::endl;
+	bool isEnabled=::enableMemoryCounter( description, memoryCounters_ );
+	if( isEnabled && verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method beginRun." << std::endl;
 }
 
-void markstools::services::MemoryCounter::postModuleBeginRun( const edm::ModuleDescription& description )
+void markstools::services::MemoryCounterPimple::postModuleBeginRun( const edm::ModuleDescription& description )
 {
-	::disableMemoryCounterAndPrint( description, pImple_->memoryCounters_, "beginRun" );
+	::disableMemoryCounterAndPrint( description, memoryCounters_, "beginRun" );
 }
 
-void markstools::services::MemoryCounter::preModuleBeginLumi( const edm::ModuleDescription& description )
+void markstools::services::MemoryCounterPimple::preModuleBeginLumi( const edm::ModuleDescription& description )
 {
-	bool isEnabled=::enableMemoryCounter( description, pImple_->memoryCounters_ );
-	if( isEnabled && pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method beginLuminosityBlock." << std::endl;
+	bool isEnabled=::enableMemoryCounter( description, memoryCounters_ );
+	if( isEnabled && verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method beginLuminosityBlock." << std::endl;
 }
 
-void markstools::services::MemoryCounter::postModuleBeginLumi( const edm::ModuleDescription& description )
+void markstools::services::MemoryCounterPimple::postModuleBeginLumi( const edm::ModuleDescription& description )
 {
-	::disableMemoryCounterAndPrint( description, pImple_->memoryCounters_, "beginLumi" );
+	::disableMemoryCounterAndPrint( description, memoryCounters_, "beginLumi" );
 }
 
-void markstools::services::MemoryCounter::preModule( const edm::ModuleDescription& description )
+void markstools::services::MemoryCounterPimple::preModule( const edm::ModuleDescription& description )
 {
-	bool isEnabled=::enableMemoryCounter( description, pImple_->memoryCounters_ );
-	if( isEnabled && pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method analyze." << std::endl;
+	bool isEnabled=::enableMemoryCounter( description, memoryCounters_ );
+	if( isEnabled && verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method analyze." << std::endl;
 }
 
-void markstools::services::MemoryCounter::postModule( const edm::ModuleDescription& description )
+void markstools::services::MemoryCounterPimple::postModule( const edm::ModuleDescription& description )
 {
-	::disableMemoryCounterAndPrint( description, pImple_->memoryCounters_, "event"+std::to_string(pImple_->eventNumber_) );
+	::disableMemoryCounterAndPrint( description, memoryCounters_, "event"+std::to_string(eventNumber_) );
 }
 
-void markstools::services::MemoryCounter::postProcessEvent( const edm::Event& event, const edm::EventSetup& eventSetup )
+void markstools::services::MemoryCounterPimple::postProcessEvent( const edm::Event& event, const edm::EventSetup& eventSetup )
 {
-	++pImple_->eventNumber_;
+	++eventNumber_;
 }
 
-void markstools::services::MemoryCounter::preModuleEndLumi( const edm::ModuleDescription& description )
+void markstools::services::MemoryCounterPimple::preModuleEndLumi( const edm::ModuleDescription& description )
 {
-	bool isEnabled=::enableMemoryCounter( description, pImple_->memoryCounters_ );
-	if( isEnabled && pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method endLuminosityBlock." << std::endl;
+	bool isEnabled=::enableMemoryCounter( description, memoryCounters_ );
+	if( isEnabled && verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method endLuminosityBlock." << std::endl;
 }
 
-void markstools::services::MemoryCounter::postModuleEndLumi( const edm::ModuleDescription& description )
+void markstools::services::MemoryCounterPimple::postModuleEndLumi( const edm::ModuleDescription& description )
 {
-	::disableMemoryCounterAndPrint( description, pImple_->memoryCounters_, "endLumi" );
+	::disableMemoryCounterAndPrint( description, memoryCounters_, "endLumi" );
 }
 
-void markstools::services::MemoryCounter::preModuleEndRun( const edm::ModuleDescription& description )
+void markstools::services::MemoryCounterPimple::preModuleEndRun( const edm::ModuleDescription& description )
 {
-	bool isEnabled=::enableMemoryCounter( description, pImple_->memoryCounters_ );
-	if( isEnabled && pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method endRun." << std::endl;
+	bool isEnabled=::enableMemoryCounter( description, memoryCounters_ );
+	if( isEnabled && verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method endRun." << std::endl;
 }
 
-void markstools::services::MemoryCounter::postModuleEndRun( const edm::ModuleDescription& description )
+void markstools::services::MemoryCounterPimple::postModuleEndRun( const edm::ModuleDescription& description )
 {
-	::disableMemoryCounterAndPrint( description, pImple_->memoryCounters_, "endRun" );
+	::disableMemoryCounterAndPrint( description, memoryCounters_, "endRun" );
 }
 
-void markstools::services::MemoryCounter::preModuleEndJob( const edm::ModuleDescription& description )
+void markstools::services::MemoryCounterPimple::preModuleEndJob( const edm::ModuleDescription& description )
 {
-	bool isEnabled=::enableMemoryCounter( description, pImple_->memoryCounters_ );
-	if( isEnabled && pImple_->verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method endJob." << std::endl;
+	bool isEnabled=::enableMemoryCounter( description, memoryCounters_ );
+	if( isEnabled && verbose_ ) std::cout << "Enabling MemCounter for module \"" << description.moduleLabel() << "\" in method endJob." << std::endl;
 }
 
-void markstools::services::MemoryCounter::postModuleEndJob( const edm::ModuleDescription& description )
+void markstools::services::MemoryCounterPimple::postModuleEndJob( const edm::ModuleDescription& description )
 {
-	::disableMemoryCounterAndPrint( description, pImple_->memoryCounters_, "endJob" );
+	::disableMemoryCounterAndPrint( description, memoryCounters_, "endJob" );
 }
