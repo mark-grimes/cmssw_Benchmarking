@@ -170,26 +170,6 @@ markstools::services::MemoryCounter::~MemoryCounter()
 	delete pImple_;
 }
 
-markstools::services::MemoryCounter::MemoryCounter( const MemoryCounter& otherMemoryCounter )
-	: pImple_(new MemoryCounterPimple(*(otherMemoryCounter.pImple_)) )
-{
-	// Since this is a service, the copy constructor should never be called
-	// but I might as well put it in just in case.
-	// No deep copy commands required at the moment.
-}
-
-markstools::services::MemoryCounter& markstools::services::MemoryCounter::operator=( const MemoryCounter& otherMemoryCounter )
-{
-	// Since this is a service, assignment should never be called
-	// but I might as well put it in just in case.
-
-	if( &otherMemoryCounter==this ) return *this; // check for self assignment
-	*pImple_=*(otherMemoryCounter.pImple_); // copy the contents of the other pimple into this pimple
-
-	// No deep copy commands required at the moment.
-	return *this;
-}
-
 void markstools::services::MemoryCounterPimple::preModuleConstruction( const edm::ModuleDescription& description )
 {
 	// If the vector is empty then I went to analyse all the modules. Otherwise check to see if the module name is in the list of modules to be analysed

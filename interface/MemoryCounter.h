@@ -30,12 +30,13 @@ namespace markstools
 		public:
 			MemoryCounter( const edm::ParameterSet& parameterSet, edm::ActivityRegistry& activityRegister );
 			virtual ~MemoryCounter();
-		private:
-			/// @brief Private copy constructor because there should only ever be one instance.
-			MemoryCounter( const MemoryCounter& otherMemoryCounter );
 
-			/// @brief Private assignment operator because there should only ever be one instance.
-			MemoryCounter& operator=( const MemoryCounter& otherMemoryCounter );
+			// Since this is a service, there should be no way to get an instance
+			// except through the framework.
+			MemoryCounter( const MemoryCounter& otherMemoryCounter ) = delete;
+			MemoryCounter( const MemoryCounter&& otherMemoryCounter ) = delete;
+			MemoryCounter& operator=( const MemoryCounter& otherMemoryCounter ) = delete;
+			MemoryCounter& operator=( const MemoryCounter&& otherMemoryCounter ) = delete;
 		private:
 			/// @brief Hide all the private members in a pimple. Google "pimple idiom" for details.
 			class MemoryCounterPimple* pImple_;
