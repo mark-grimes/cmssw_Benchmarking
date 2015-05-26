@@ -2,19 +2,6 @@ import JobInfo
 import sys
 import ROOT
 
-if len( sys.argv ) != 2 : raise Exception( 'The only parameter should be the filename of a dump of the cmsRun output' )
-
-
-results=JobInfo.JobInfo()
-try :
-    input=open( sys.argv[1] )
-    results.parseFile( input )
-except :
-    print "Exception occured while trying to process file "+filename
-finally :
-    input.close()
-    del input
-
 
 def createPlot( allResults, moduleNames, valueFunctor, title="" ):
     """
@@ -39,14 +26,21 @@ def createPlot( allResults, moduleNames, valueFunctor, title="" ):
     plots=[]
     for moduleIndex in range(0,len(moduleNames)) :
         module=allResults.modules[moduleNames[moduleIndex]]
-        plots.append( ROOT.TH1F( uniqueName+"_"+str(len(plots)), module.name, len(module.steps), -0.5, len(module.steps)-0.5 ) )
+        
+        plots.append( ROOT.TH1F( uniqueName+"_"+str(len(plots)), module.name, len(allResults.steps), -0.5, len(allResults.steps)-0.5 ) )
+        lastValue=0;
         for index in range(0,len(allResults.steps)) :
             stepName=allResults.steps[index]
+            
             try :
                 plots[-1].SetBinContent( index+1, valueFunctor( module.steps[stepName] ) )
+                lastValue=valueFunctor( module.steps[stepName] )
                 if index%binLabelEvery==0 : plots[-1].GetXaxis().SetBinLabel( index+1, stepName )
             except KeyError :
-                pass # If the file didn't finish properly not all modules will have the final step
+                # If the file didn't finish properly not all modules will have the final step
+                plots[-1].SetBinContent( index+1, lastValue )
+                if index%binLabelEvery==0 : plots[-1].GetXaxis().SetBinLabel( index+1, stepName )
+
         plots[-1].GetYaxis().SetTitle( "Memory/MiB" )
         #plots[-1].GetXaxis().SetRangeUser( -0.5, len(allResults.steps)-0.5 );
         colour=availableColours[moduleIndex%len(availableColours)]-moduleIndex/len(availableColours)
@@ -64,7 +58,7 @@ def createPlot( allResults, moduleNames, valueFunctor, title="" ):
     legend=canvas.BuildLegend();
     legend.SetFillColor( ROOT.kWhite )
 
-    return (canvas,plots)
+    return type('Plot', (), {'canvas':canvas,'plots':plots,'legend':legend} )
 
 def orderModulesByMaximumValue( allResults, valueFunctor ) :
     """
@@ -83,24 +77,44 @@ def orderModulesByMaximumValue( allResults, valueFunctor ) :
         maximaForModules.append( (moduleName,valueFunctor(module.steps[maxStepName]) ) )
     return map(lambda x:x[0], sorted(maximaForModules,lambda a,b:cmp(a[1],b[1]),reverse=True) )
 
-def createPlotForMaximumModules( allResults, valueFunctor, title="", numberToPlot=None ) :
+def createPlotForMaximumModules( allResults, valueFunctor, title="", numberToPlot=None, whiteList=None ) :
     """
     Just combines createPlot and orderModulesByMaximumValue into one easy call, passing
     the same valueFunctor for both.
     """
     moduleNames=orderModulesByMaximumValue( allResults, valueFunctor );
-    if numberToPlot==None or numberToPlot>len(moduleNames) :
+    # If a white list has been specified, only include modules in that list
+    if whiteList==None :
         subsetToPlot=moduleNames
     else :
-        subsetToPlot=moduleNames[:numberToPlot]
+        subsetToPlot=[]
+        for moduleName in moduleNames :
+            if whiteList.count(moduleName)!=0 : subsetToPlot.append(moduleName)
+    # Limit the output if required
+    if numberToPlot!=None and numberToPlot<len(subsetToPlot) :
+        subsetToPlot=subsetToPlot[:numberToPlot]
+
     return createPlot( allResults, subsetToPlot, valueFunctor, title )
 
+if __name__ == '__main__' :
+    if len( sys.argv ) != 2 : raise Exception( 'The only parameter should be the filename of a dump of the cmsRun output' )
+    
+    results=JobInfo.JobInfo()
+    try :
+        input=open( sys.argv[1] )
+        results.parseFile( input )
+    except Exception as error:
+        print "Exception occured while trying to process file "+sys.argv[1]
+        print error
+    finally :
+        input.close()
+        del input
 
-numberOfModulesToPlot=25
+    numberOfModulesToPlot=25
 
-peakPlot=createPlotForMaximumModules( results, lambda step : step.peakMemory, "Peak memory", numberOfModulesToPlot )
-retainedPlot=createPlotForMaximumModules( results, lambda step : step.heldMemory, "Retained memory", numberOfModulesToPlot )
-productSizePlot=createPlotForMaximumModules( results, lambda step : step.productSize, "Product size", numberOfModulesToPlot )
-retainedExcludingProductPlot=createPlotForMaximumModules( results, lambda step : step.heldMemory-step.productSize, "Retained memory excluding product", numberOfModulesToPlot )
+    peakPlot=createPlotForMaximumModules( results, lambda step : step.peakMemory, "Peak memory", numberOfModulesToPlot )
+    retainedPlot=createPlotForMaximumModules( results, lambda step : step.heldMemory, "Retained memory", numberOfModulesToPlot )
+    productSizePlot=createPlotForMaximumModules( results, lambda step : step.productSize, "Product size", numberOfModulesToPlot )
+    retainedExcludingProductPlot=createPlotForMaximumModules( results, lambda step : step.heldMemory-step.productSize, "Retained memory excluding product", numberOfModulesToPlot )
 
 
