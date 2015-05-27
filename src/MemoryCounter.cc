@@ -38,9 +38,11 @@ namespace markstools
 		class MemoryCounterPimple
 		{
 		public:
-			MemoryCounterPimple() : eventNumber_(1), verbose_(false), createNewMemoryCounter(NULL) {}
+			MemoryCounterPimple() : eventNumber_(1), lumiNumber_(1), runNumber_(1), verbose_(false), createNewMemoryCounter(NULL) {}
 			std::map<std::string,::ModuleDetails> memoryCounters_;
 			size_t eventNumber_;
+			size_t lumiNumber_;
+			size_t runNumber_;
 			std::vector<std::string> modulesToAnalyse_;
 			bool verbose_;
 			memcounter::IMemoryCounter* (*createNewMemoryCounter)( void );
@@ -83,22 +85,23 @@ markstools::services::MemoryCounter::MemoryCounter( const edm::ParameterSet& par
 		activityRegister.watchPreModuleBeginJob( std::bind( &MemoryCounterPimple::enableMemoryCounter, pImple_, std::placeholders::_1, []{return "beginJob";} ) );
 		activityRegister.watchPostModuleBeginJob( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrint, pImple_, std::placeholders::_1, []{return "beginJob";} ) );
 
-		activityRegister.watchPreModuleBeginRun( std::bind( &MemoryCounterPimple::enableMemoryCounter, pImple_, std::placeholders::_1, []{return "beginRun";} ) );
-		activityRegister.watchPostModuleBeginRun( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrint, pImple_, std::placeholders::_1, []{return "beginRun";} ) );
+		activityRegister.watchPreModuleBeginRun( std::bind( &MemoryCounterPimple::enableMemoryCounter, pImple_, std::placeholders::_1, [&]{return "beginRun"+std::to_string(pImple_->runNumber_);} ) );
+		activityRegister.watchPostModuleBeginRun( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrint, pImple_, std::placeholders::_1, [&]{return "beginRun"+std::to_string(pImple_->runNumber_);} ) );
 
-		activityRegister.watchPreModuleBeginLumi( std::bind( &MemoryCounterPimple::enableMemoryCounter, pImple_, std::placeholders::_1, []{return "beginLumi";} ) );
-		activityRegister.watchPostModuleBeginLumi( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrint, pImple_, std::placeholders::_1, []{return "beginLumi";} ) );
+		activityRegister.watchPreModuleBeginLumi( std::bind( &MemoryCounterPimple::enableMemoryCounter, pImple_, std::placeholders::_1, [&]{return "beginLumi"+std::to_string(pImple_->lumiNumber_);} ) );
+		activityRegister.watchPostModuleBeginLumi( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrint, pImple_, std::placeholders::_1, [&]{return "beginLumi"+std::to_string(pImple_->lumiNumber_);} ) );
 
 		activityRegister.watchPreModule( std::bind( &MemoryCounterPimple::enableMemoryCounter, pImple_, std::placeholders::_1, [&]{return "event"+std::to_string(pImple_->eventNumber_);} ) );
 		activityRegister.watchPostModule( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrint, pImple_, std::placeholders::_1, [&]{return "event"+std::to_string(pImple_->eventNumber_);} ) );
-
 		activityRegister.watchPostProcessEvent( [&](const edm::Event&,const edm::EventSetup&){++pImple_->eventNumber_;} );
 
-		activityRegister.watchPreModuleEndLumi( std::bind( &MemoryCounterPimple::enableMemoryCounter, pImple_, std::placeholders::_1, []{return "endLumi";} ) );
-		activityRegister.watchPostModuleEndLumi( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrint, pImple_, std::placeholders::_1, []{return "endLumi";} ) );
+		activityRegister.watchPreModuleEndLumi( std::bind( &MemoryCounterPimple::enableMemoryCounter, pImple_, std::placeholders::_1, [&]{return "endLumi"+std::to_string(pImple_->lumiNumber_);} ) );
+		activityRegister.watchPostModuleEndLumi( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrint, pImple_, std::placeholders::_1, [&]{return "endLumi"+std::to_string(pImple_->lumiNumber_);} ) );
+		activityRegister.watchPostEndLumi( [&](edm::LuminosityBlock const&, edm::EventSetup const&){++pImple_->lumiNumber_;} );
 
-		activityRegister.watchPreModuleEndRun( std::bind( &MemoryCounterPimple::enableMemoryCounter, pImple_, std::placeholders::_1, []{return "endRun";} ) );
-		activityRegister.watchPostModuleEndRun( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrint, pImple_, std::placeholders::_1, []{return "endRun";} ) );
+		activityRegister.watchPreModuleEndRun( std::bind( &MemoryCounterPimple::enableMemoryCounter, pImple_, std::placeholders::_1, [&]{return "endRun"+std::to_string(pImple_->runNumber_);} ) );
+		activityRegister.watchPostModuleEndRun( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrint, pImple_, std::placeholders::_1, [&]{return "endRun"+std::to_string(pImple_->runNumber_);} ) );
+		activityRegister.watchPostEndRun( [&](edm::Run const&, edm::EventSetup const&){++pImple_->runNumber_;} );
 
 		activityRegister.watchPreModuleEndJob( std::bind( &MemoryCounterPimple::enableMemoryCounter, pImple_, std::placeholders::_1, []{return "endJob";} ) );
 		activityRegister.watchPostModuleEndJob( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrint, pImple_, std::placeholders::_1, []{return "endJob";} ) );
