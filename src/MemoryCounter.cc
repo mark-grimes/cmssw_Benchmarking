@@ -3,6 +3,17 @@
 #include <DataFormats/Provenance/interface/ModuleDescription.h>
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ServiceRegistry/interface/ActivityRegistry.h"
+
+// The signals in ActivityRegistry changed drastically to cover threaded
+// use, so I need to conditionally compile certain things depending on the
+// version of CMSSW. I can't find any macros about the CMSSW version, so
+// I'll just check one of the internal use ActivityRegistry macros. This
+// wasn't defined in the old ActivityRegistry file (pre 7_4_something).
+#ifdef AR_WATCH_USING_METHOD_3
+#	define MEMORYCOUNTER_USE_NEW_ACTIVITYREGISTRY_SIGNALS
+#	include "FWCore/ServiceRegistry/interface/ModuleCallingContext.h"
+#endif
+
 #include <dlfcn.h>
 
 #include <iostream>
@@ -51,6 +62,17 @@ namespace markstools
 			void enableMemoryCounter( const edm::ModuleDescription& description, std::function<std::string()> methodNameFunctor );
 			void disableMemoryCounterAndPrint( const edm::ModuleDescription& description, std::function<std::string()> methodNameFunctor );
 
+
+#ifdef MEMORYCOUNTER_USE_NEW_ACTIVITYREGISTRY_SIGNALS
+			void enableMemoryCounterForStreams( edm::ModuleCallingContext const& mcc, std::function<std::string()> methodNameFunctor )
+			{
+				enableMemoryCounter( *mcc.moduleDescription(), methodNameFunctor );
+			}
+			void disableMemoryCounterAndPrintForStreams( edm::ModuleCallingContext const& mcc, std::function<std::string()> methodNameFunctor )
+			{
+				disableMemoryCounterAndPrint( *mcc.moduleDescription(), methodNameFunctor );
+			}
+#endif
 			void preModuleConstruction( const edm::ModuleDescription& description );
 		}; // end of the PlottingTimerPimple class
 
@@ -85,6 +107,11 @@ markstools::services::MemoryCounter::MemoryCounter( const edm::ParameterSet& par
 		activityRegister.watchPreModuleBeginJob( std::bind( &MemoryCounterPimple::enableMemoryCounter, pImple_, std::placeholders::_1, []{return "beginJob";} ) );
 		activityRegister.watchPostModuleBeginJob( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrint, pImple_, std::placeholders::_1, []{return "beginJob";} ) );
 
+#ifdef MEMORYCOUNTER_USE_NEW_ACTIVITYREGISTRY_SIGNALS
+		activityRegister.watchPreModuleEvent( std::bind( &MemoryCounterPimple::enableMemoryCounterForStreams, pImple_, std::placeholders::_2, [&]{return "event"+std::to_string(pImple_->eventNumber_);} ) );
+		activityRegister.watchPostModuleEvent( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrintForStreams, pImple_, std::placeholders::_2, [&]{return "event"+std::to_string(pImple_->eventNumber_);} ) );
+		activityRegister.watchPostEvent( [&](edm::StreamContext const&){++pImple_->eventNumber_;} );
+#else
 		activityRegister.watchPreModuleBeginRun( std::bind( &MemoryCounterPimple::enableMemoryCounter, pImple_, std::placeholders::_1, [&]{return "beginRun"+std::to_string(pImple_->runNumber_);} ) );
 		activityRegister.watchPostModuleBeginRun( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrint, pImple_, std::placeholders::_1, [&]{return "beginRun"+std::to_string(pImple_->runNumber_);} ) );
 
@@ -102,7 +129,7 @@ markstools::services::MemoryCounter::MemoryCounter( const edm::ParameterSet& par
 		activityRegister.watchPreModuleEndRun( std::bind( &MemoryCounterPimple::enableMemoryCounter, pImple_, std::placeholders::_1, [&]{return "endRun"+std::to_string(pImple_->runNumber_);} ) );
 		activityRegister.watchPostModuleEndRun( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrint, pImple_, std::placeholders::_1, [&]{return "endRun"+std::to_string(pImple_->runNumber_);} ) );
 		activityRegister.watchPostEndRun( [&](edm::Run const&, edm::EventSetup const&){++pImple_->runNumber_;} );
-
+#endif
 		activityRegister.watchPreModuleEndJob( std::bind( &MemoryCounterPimple::enableMemoryCounter, pImple_, std::placeholders::_1, []{return "endJob";} ) );
 		activityRegister.watchPostModuleEndJob( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrint, pImple_, std::placeholders::_1, []{return "endJob";} ) );
 	}
