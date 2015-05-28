@@ -111,6 +111,34 @@ markstools::services::MemoryCounter::MemoryCounter( const edm::ParameterSet& par
 		activityRegister.watchPreModuleEvent( std::bind( &MemoryCounterPimple::enableMemoryCounterForStreams, pImple_, std::placeholders::_2, [&]{return "event"+std::to_string(pImple_->eventNumber_);} ) );
 		activityRegister.watchPostModuleEvent( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrintForStreams, pImple_, std::placeholders::_2, [&]{return "event"+std::to_string(pImple_->eventNumber_);} ) );
 		activityRegister.watchPostEvent( [&](edm::StreamContext const&){++pImple_->eventNumber_;} );
+
+		activityRegister.watchPreModuleBeginStream( std::bind( &MemoryCounterPimple::enableMemoryCounterForStreams, pImple_, std::placeholders::_2, []{return "ModuleBeginStream";} ) );
+		activityRegister.watchPostModuleBeginStream( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrintForStreams, pImple_, std::placeholders::_2, []{return "ModuleBeginStream";} ) );
+		activityRegister.watchPreModuleEndStream( std::bind( &MemoryCounterPimple::enableMemoryCounterForStreams, pImple_, std::placeholders::_2, []{return "ModuleEndStream";} ) );
+		activityRegister.watchPostModuleEndStream( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrintForStreams, pImple_, std::placeholders::_2, []{return "ModuleEndStream";} ) );
+
+		activityRegister.watchPreModuleStreamBeginRun( std::bind( &MemoryCounterPimple::enableMemoryCounterForStreams, pImple_, std::placeholders::_2, []{return "ModuleStreamBeginRun";} ) );
+		activityRegister.watchPostModuleStreamBeginRun( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrintForStreams, pImple_, std::placeholders::_2, []{return "ModuleStreamBeginRun";} ) );
+		activityRegister.watchPreModuleStreamEndRun( std::bind( &MemoryCounterPimple::enableMemoryCounterForStreams, pImple_, std::placeholders::_2, []{return "ModuleStreamEndRun";} ) );
+		activityRegister.watchPostModuleStreamEndRun( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrintForStreams, pImple_, std::placeholders::_2, []{return "ModuleStreamEndRun";} ) );
+
+		activityRegister.watchPreModuleStreamBeginLumi( std::bind( &MemoryCounterPimple::enableMemoryCounterForStreams, pImple_, std::placeholders::_2, []{return "ModuleStreamBeginLumi";} ) );
+		activityRegister.watchPostModuleStreamBeginLumi( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrintForStreams, pImple_, std::placeholders::_2, []{return "ModuleStreamBeginLumi";} ) );
+		activityRegister.watchPreModuleStreamEndLumi( std::bind( &MemoryCounterPimple::enableMemoryCounterForStreams, pImple_, std::placeholders::_2, []{return "ModuleStreamEndLumi";} ) );
+		activityRegister.watchPostModuleStreamEndLumi( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrintForStreams, pImple_, std::placeholders::_2, []{return "ModuleStreamEndLumi";} ) );
+
+		activityRegister.watchPreModuleGlobalBeginRun( std::bind( &MemoryCounterPimple::enableMemoryCounterForStreams, pImple_, std::placeholders::_2, []{return "ModuleGlobalBeginRun";} ) );
+		activityRegister.watchPostModuleGlobalBeginRun( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrintForStreams, pImple_, std::placeholders::_2, []{return "ModuleGlobalBeginRun";} ) );
+		activityRegister.watchPreModuleGlobalEndRun( std::bind( &MemoryCounterPimple::enableMemoryCounterForStreams, pImple_, std::placeholders::_2, []{return "ModuleGlobalEndRun";} ) );
+		activityRegister.watchPostModuleGlobalEndRun( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrintForStreams, pImple_, std::placeholders::_2, []{return "ModuleGlobalEndRun";} ) );
+
+		activityRegister.watchPreModuleGlobalBeginLumi( std::bind( &MemoryCounterPimple::enableMemoryCounterForStreams, pImple_, std::placeholders::_2, []{return "ModuleGlobalBeginLumi";} ) );
+		activityRegister.watchPostModuleGlobalBeginLumi( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrintForStreams, pImple_, std::placeholders::_2, []{return "ModuleGlobalBeginLumi";} ) );
+		activityRegister.watchPreModuleGlobalEndLumi( std::bind( &MemoryCounterPimple::enableMemoryCounterForStreams, pImple_, std::placeholders::_2, []{return "ModuleGlobalEndLumi";} ) );
+		activityRegister.watchPostModuleGlobalEndLumi( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrintForStreams, pImple_, std::placeholders::_2, []{return "ModuleGlobalEndLumi";} ) );
+
+		activityRegister.watchPostGlobalEndRun( [&](edm::GlobalContext const&){++pImple_->runNumber_;} );
+		activityRegister.watchPostGlobalEndLumi( [&](edm::GlobalContext const&){++pImple_->lumiNumber_;} );
 #else
 		activityRegister.watchPreModuleBeginRun( std::bind( &MemoryCounterPimple::enableMemoryCounter, pImple_, std::placeholders::_1, [&]{return "beginRun"+std::to_string(pImple_->runNumber_);} ) );
 		activityRegister.watchPostModuleBeginRun( std::bind( &MemoryCounterPimple::disableMemoryCounterAndPrint, pImple_, std::placeholders::_1, [&]{return "beginRun"+std::to_string(pImple_->runNumber_);} ) );
