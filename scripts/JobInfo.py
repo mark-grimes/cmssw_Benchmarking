@@ -1,4 +1,4 @@
-import pickle
+import cPickle, gzip
 
 class MemoryLog :
     MemScale=1024.0*1024.0
@@ -58,12 +58,15 @@ class JobInfo :
 
     @staticmethod
     def load( filename ):
-        inputFile=open( filename )
-        return pickle.load( inputFile )
+        inputFile=gzip.open( filename )
+        newJobInfo=cPickle.load( inputFile )
+        inputFile.close()
+        return newJobInfo
 
     def save( self, filename ):
-        outputFile=open( filename, 'w' )
-        pickle.dump( self, outputFile )
+        outputFile=gzip.open( filename, 'w' )
+        cPickle.dump( self, outputFile )
+        outputFile.close()
 
     def parseFile( self, inputFile ):
         while True :
@@ -115,6 +118,7 @@ class JobInfo :
 
 if __name__ == '__main__':
     import sys
+    import JobInfo # Need to import itself, otherwise pickling messes up the module name
 
     results={}
     for filename in sys.argv[1:] :
