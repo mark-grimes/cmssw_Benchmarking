@@ -30,6 +30,12 @@ namespace
 		int size; // VmSize
 	};
 
+	// Okay, I know this is a global but I only ever set it once. Don't see the point
+	// in constantly getting it from the system config. Should really use some kind of
+	// std::call_once but there should only ever be one service instance, and it's only
+	// modified in the constructor.
+	int global_pageSizeInKb=0; // Set to zero so it's obvious if an uninitiated value is ever used.
+
 	::MemoryUse getMemoryUse( const std::string& pid )
 	{
 		std::ifstream inputFile( "/proc/"+pid+"/statm" );
@@ -42,8 +48,10 @@ namespace
 	    boost::split(columns, fileContents, boost::is_any_of(" "));
 	    if( columns.size()<2 ) throw std::runtime_error( "Unable to split the columns in /proc/"+pid+"/statm properly" );
 
-	    // First column is RSS, second is size. See http://linux.die.net/man/5/proc
-	    return ::MemoryUse{ std::stoi(columns[0]), std::stoi(columns[1]) };
+	    // First column is size, second is RSS. See http://linux.die.net/man/5/proc.
+	    // Note that statm reports in mutiples of the page size, so need to multiply
+	    // by that.
+	    return ::MemoryUse{ std::stoi(columns[1])*::global_pageSizeInKb, std::stoi(columns[0])*::global_pageSizeInKb };
 	}
 
 	float getSystemLoad()
@@ -68,7 +76,7 @@ namespace
 		::MemoryUse currentUsage=::getMemoryUse( pid );
 		float systemLoad=getSystemLoad();
 
-		output << prefix << " RSS " << currentUsage.rss << " Size " << currentUsage.size << " Load " << systemLoad << "\n";
+		output << prefix << " RSS/KiB " << currentUsage.rss << " Size/KiB " << currentUsage.size << " Load " << systemLoad << "\n";
 	}
 
 	void dumpRSSForModuleDescription( const edm::ModuleDescription& description, const std::string& pid, std::function<std::string()> methodNameFunctor )
@@ -90,6 +98,7 @@ markstools::services::CheckRSSService::CheckRSSService( const edm::ParameterSet&
 	: eventNumber_(0), runNumber_(0), lumiNumber_(0)
 {
 	std::string pid=std::to_string( getpid() );
+	::global_pageSizeInKb=sysconf(_SC_PAGESIZE)/1024;
 
 	activityRegister.watchPreModuleConstruction( std::bind( &::dumpRSSForModuleDescription, std::placeholders::_1, pid, []{return "Start_Construction";} )  );
 	activityRegister.watchPostModuleConstruction( std::bind( &::dumpRSSForModuleDescription, std::placeholders::_1, pid, []{return "End_Construction";} ) );
