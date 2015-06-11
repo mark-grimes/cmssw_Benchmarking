@@ -80,8 +80,9 @@ void markstools::services::IgprofDumpPimple::touchFileAndMoveDump( const std::st
 		watchFile.close();
 
 		// Not sure if I should sleep here to give igprof time to make the dump?
+#ifdef IGPROFDUMP_USE_NEW_ACTIVITYREGISTRY_SIGNALS // Doesn't appear to be available in the gcc with 6_2_X_SLHC
 		std::this_thread::sleep_for(timeToSleepAfterTouch_);
-
+#endif
 		// Now move the dump file so that it's not overwritten but subsequent dumps
 		boost::filesystem::path newFilename=filenameOfIgprofDump_;
 		newFilename+=dumpNameSuffix;
