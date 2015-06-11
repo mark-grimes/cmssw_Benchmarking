@@ -174,6 +174,3 @@ void markstools::services::ModuleTimer::postModuleEndJob( const edm::ModuleDescr
 	std::cout << " *MODULETIMER* endJob," << description.moduleLabel() << "," << description.moduleName()
 			<< "," << timeTaken.count().real << "," << timeTaken.count().user << "," << timeTaken.count().system << std::endl;
 }
-
-using markstools::services::ModuleTimer;
-DEFINE_FWK_SERVICE( ModuleTimer );
