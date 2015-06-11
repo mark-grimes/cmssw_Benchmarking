@@ -97,18 +97,11 @@ def createPlotForMaximumModules( allResults, valueFunctor, title="", numberToPlo
     return createPlot( allResults, subsetToPlot, valueFunctor, title )
 
 if __name__ == '__main__' :
+    import moduleMemoryPlots # I've seen weird things happen with the namespace if a "__main__" conditional doesn't import itself
+
     if len( sys.argv ) != 2 : raise Exception( 'The only parameter should be the filename of a dump of the cmsRun output' )
     
-    results=JobInfo.JobInfo()
-    try :
-        input=open( sys.argv[1] )
-        results.parseFile( input )
-    except Exception as error:
-        print "Exception occured while trying to process file "+sys.argv[1]
-        print error
-    finally :
-        input.close()
-        del input
+    results=JobInfo.JobInfo.load( sys.argv[1] )
 
     numberOfModulesToPlot=25
 
