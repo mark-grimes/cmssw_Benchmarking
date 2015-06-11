@@ -58,10 +58,34 @@ class JobInfo :
 
     @staticmethod
     def load( filename ):
-        inputFile=gzip.open( filename )
-        newJobInfo=cPickle.load( inputFile )
-        inputFile.close()
-        return newJobInfo
+        if filename[-7:]==".pkl.gz" or filename[-4:]==".pkl" :
+            return JobInfo.loadFromPickleFile( filename )
+        else :
+            return JobInfo.loadFromLogFile( filename )
+
+    @staticmethod
+    def loadFromPickleFile( filename ):
+        try :
+            if filename[-3:]==".gz" :
+                inputFile=gzip.open( filename )
+            else :
+                inputFile=open( filename )
+            return cPickle.load( inputFile )
+        finally :
+            inputFile.close()
+
+    @staticmethod
+    def loadFromLogFile( filename ):
+        try :
+            if filename[-3:]==".gz" :
+                inputFile=gzip.open( filename )
+            else :
+                inputFile=open( filename )
+            returnValue=JobInfo()
+            returnValue.parseFile( inputFile )
+            return returnValue
+        finally :
+            inputFile.close()
 
     def save( self, filename ):
         outputFile=gzip.open( filename, 'w' )
